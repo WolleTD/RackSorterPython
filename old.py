@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import copy
 import random
 import time
 import itertools
@@ -146,6 +147,7 @@ def distance(a, b):
 
 def main(debug=False):
     count = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    nonecnt = 0
     print("Creating all possible Rack permutations")
     rackPermutations = list(itertools.permutations(
                             [0, 1, 2, 3, 4, 5, 6, 7, None]))
@@ -164,6 +166,7 @@ def main(debug=False):
                 c.append(c[0])
                 c.append(None)
                 noneflag = True
+                nonecnt += 1
             for i, n in enumerate(c):
                 if n is None:
                     break
@@ -176,14 +179,33 @@ def main(debug=False):
                 else:
                     d += distance(c[i - 1], n)
                     d += distance(n, c[i - 1])
-            print("Distance for solving: {} on {} long chain {}".format(
-                  d, len(c), "with None" if noneflag else ""))
+            # print("Distance for solving: {} on {} long chain {}".format(
+            #       d, len(c), "with None" if noneflag else ""))
 
     for i in range(10):
         print("{} of {} permutations ({}%) have {} chains"
               .format(count[i], len(rackPermutations),
                       count[i] / len(rackPermutations) * 100.0, i))
+    print("{} of {} permutations with None in Mainchain"
+          .format(nonecnt, len(rackPermutations)))
     # print("Done finding {} chain groups!".format(len(chainGroups)))
+
+
+def bmain(debug=False):
+    count = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    print("Creating all possible Rack permutations")
+    rackPermutations = list(itertools.permutations(
+                            [0, 1, 2, 3, 4, 5, 6, 7, None]))
+    print("Crunching all permutations...")
+    for perm in rackPermutations:
+        chains = findChains(perm)
+        realChainz = [c for c in chains if len(c) > 1]
+        count[len(realChainz)] += 1
+
+    for i in range(10):
+        print("{} of {} permutations ({}%) have {} chains"
+              .format(count[i], len(rackPermutations),
+                      count[i] / len(rackPermutations) * 100.0, i))
 
 
 def testmain(debug=False):
