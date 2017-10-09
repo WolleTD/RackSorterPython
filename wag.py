@@ -132,53 +132,20 @@ def printArray(stack):
         print()
 
 
-def distance(a, b):
-    if a is None:
-        a = 8
-    if b is None:
-        b = 8
-    a_row = a // 3
-    a_col = a % 3
-    b_row = b // 3
-    b_col = b % 3
-    return max(abs(a_row - b_row), abs(a_col - b_col))
-
-
 def main(debug=False):
+    i = 0
     count = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     print("Creating all possible Rack permutations")
     rackPermutations = list(itertools.permutations(
                             [0, 1, 2, 3, 4, 5, 6, 7, None]))
     print("Crunching all permutations...")
     for perm in rackPermutations:
-        # WHAT DO WE WANT TO KNOW ABOUT THIS SHIT
-        d = 0
-        i = 0
         chains = findChains(perm)
-        realChainz = [c for c in chains if len(c) > 1]
-        if len(realChainz) == 1:
-            count[1] += 1
-            noneflag = False
-            c = realChainz[0]
-            if None not in c:
-                c.append(c[0])
-                c.append(None)
-                noneflag = True
-            for i, n in enumerate(c):
-                if n is None:
-                    break
-                elif i is 0 and noneflag:
-                    # SONDERFALLBEHANDLUNG
-                    d += distance(None, c[i + 1])
-                elif i is 1 and noneflag:
-                    d += distance(None, n)
-                    d += distance(c[i + 1], n)
-                else:
-                    d += distance(c[i - 1], n)
-                    d += distance(n, c[i - 1])
-            print("Distance for solving: {} on {} long chain {}".format(
-                  d, len(c), "with None" if noneflag else ""))
-
+        tmp_chains = chains
+        for chain in tmp_chains:
+            if len(chain) is 1:
+                chains.remove(chain)
+        count[len(chains)] += 1
     for i in range(10):
         print("{} of {} permutations ({}%) have {} chains"
               .format(count[i], len(rackPermutations),
