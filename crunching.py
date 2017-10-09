@@ -75,7 +75,57 @@ def solveOneByOne(stack, chains):
     # basically old solutionChain1
     # first, remove all length one chains (those are already placed)
     realChainz = [c for c in chains if len(c) > 1]
-    # Now, 
+    totalDistance = 0
+    # We are ready to start sorting now
+    for i, chain in enumerate(realChainz):
+        # Maybe append None?
+        noneFlag = False
+        if chain[-1] is not None:
+            chain.append(chain[0])
+            chain.append(None)
+            noneFlag = True
+
+        for j, n in enumerate(chain):
+            # i is current chain
+            # j is current index of chain
+            # n is both the value to move and the target index
+            # except when it isn't: when we had to append None
+            # the target index is None for the very first element
+            # n_j+1 is the source position of element n_j
+            #
+            # Assuming start on the first element of the first chain
+            # there are two distance options there:
+            # a) move element to correct position: dist(n_j+1, n_j)
+            # b) move element to position None: dist(n_j+1, None)
+            #    (if None had to be appended)
+            # For every other chain, b is the only option
+            #
+            # For any other element, we have to add the distance from
+            # the recent drop off position as well:
+            # To move element n_j from position n_j+1 to position n_j,
+            # we have to travel from n_j-1 were we stopped to n_j+1, first
+            # so it's: dist(n_j-1, n_j+1) + dist(n_j+1, n_j)
+            #
+            # For the second element though, there is again another case
+            # for when None had to be appended:
+            # dist(None, n_j+1) + dist(n_j+1, n_j)
+            #
+            # Obviously, when reaching None as the last element, we break
+            # and go to the next chain
+            if n is None:
+                break
+            elif j is 0 and noneFlag:
+                totalDistance += distance(chain[j + 1], None)
+            elif j is 0:
+                totalDistance += distance(chain[j + 1], n)
+            elif j is 1 and noneFlag:
+                totalDistance += distance(None, chain[j + 1])
+                totalDistance += distance(chain[j + 1], n)
+            else:
+                totalDistance += distance(chain[j - 1], chain[j + 1])
+                totalDistance += distance(chain[j + 1], n)
+    # Done with the chains
+    return totalDistance
 
 
 def solveTogether(stack, chains):
@@ -91,38 +141,16 @@ def main(debug=False):
     print("Crunching all permutations...")
     for perm in rackPermutations:
         # WHAT DO WE WANT TO KNOW ABOUT THIS SHIT
-        d = 0
         i = 0
         chains = findChains(perm)
         # Solve different ways:
         # 1: work whole chain, append next one
-        solveOneByOne(copy(perm), chains)
+        d = solveOneByOne(copy(perm), chains)
+        print("{}: {}".format(perm, d))
         # 2: concatenate all chains, work one chain
         # 3: clever concatenation should do the trick
-        realChainz = [c for c in chains if len(c) > 1]
-        if len(realChainz) == 1:
-            count[1] += 1
-            noneflag = False
-            c = realChainz[0]
-            if None not in c:
-                c.append(c[0])
-                c.append(None)
-                noneflag = True
-                nonecnt += 1
-            for i, n in enumerate(c):
-                if n is None:
-                    break
-                elif i is 0 and noneflag:
-                    # SONDERFALLBEHANDLUNG
-                    d += distance(None, c[i + 1])
-                elif i is 1 and noneflag:
-                    d += distance(None, n)
-                    d += distance(c[i + 1], n)
-                else:
-                    d += distance(c[i - 1], n)
-                    d += distance(n, c[i - 1])
-            # print("Distance for solving: {} on {} long chain {}".format(
-            #       d, len(c), "with None" if noneflag else ""))
+        # print("Distance for solving: {} on {} long chain {}".format(
+        #       d, len(c), "with None" if noneflag else ""))
 
     for i in range(10):
         print("{} of {} permutations ({}%) have {} chains"
@@ -131,3 +159,7 @@ def main(debug=False):
     print("{} of {} permutations with None in Mainchain"
           .format(nonecnt, len(rackPermutations)))
     # print("Done finding {} chain groups!".format(len(chainGroups)))
+
+
+if __name__ == '__main__':
+    main()
