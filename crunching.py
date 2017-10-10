@@ -71,7 +71,7 @@ def distance(a, b):
     return max(abs(a_row - b_row), abs(a_col - b_col))
 
 
-def solveOneByOne(stack, chains):
+def solveOneByOne(stack, chains, startIdx=None):
     # basically old solutionChain1
     # first, remove all length one chains (those are already placed)
     realChainz = [c for c in chains if len(c) > 1]
@@ -115,8 +115,10 @@ def solveOneByOne(stack, chains):
             if n is None:
                 break
             elif j is 0 and noneFlag:
+                totalDistance += distance(startIdx, chain[j + 1])
                 totalDistance += distance(chain[j + 1], None)
             elif j is 0:
+                totalDistance += distance(startIdx, chain[j + 1])
                 totalDistance += distance(chain[j + 1], n)
             elif j is 1 and noneFlag:
                 totalDistance += distance(None, chain[j + 1])
@@ -128,8 +130,50 @@ def solveOneByOne(stack, chains):
     return totalDistance
 
 
-def solveTogether(stack, chains):
-    pass
+def testChain(l):
+    stacks = concatChains(l, findChains(l))
+    for stack, cost, startIdx in stacks:
+        totalCost = solveOneByOne(stack, findChains(stack), startIdx) + cost
+        print(stack, findChains(stack), totalCost, cost, startIdx)
+    print(l, findChains(l), solveOneByOne(l, findChains(l)))
+
+
+def concatChains(stack, chains):
+    # In theory, this has many different candidates
+    # Get all chains >1
+    realChainz = [c for c in chains if len(c) > 1]
+    # To concatenate the chains, we have to move one element of
+    # each chain to None
+    # if the first chain contains none, it is not part of our business
+    start = 1 if realChainz[0][-1] is None else 0
+    changeLists = concatRecursive([], realChainz, start)
+    stackCandidates = []
+    for clist in changeLists:
+        newStack = copy(stack)
+        cost = 0
+        pNone = None
+        for n in clist:
+            pN = newStack.index(n)
+            cost += distance(pNone, pN)
+            pNone = newStack.index(None)
+            cost += distance(pN, pNone)
+            newStack[pNone], newStack[pN] = n, None
+        if newStack in stackCandidates:
+            print("Weird...", newStack)
+        else:
+            stackCandidates.append((newStack, cost, pNone))
+    return stackCandidates
+
+
+def concatRecursive(changelist, chainlist, chainidx):
+    candidates = []
+    if chainidx is len(chainlist):
+        return [changelist]
+    for n in chainlist[chainidx]:
+        newChangeList = copy(changelist)
+        newChangeList.append(n)
+        candidates += concatRecursive(newChangeList, chainlist, chainidx + 1)
+    return candidates
 
 
 def main(debug=False):
