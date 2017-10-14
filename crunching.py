@@ -146,7 +146,10 @@ def concatChains(stack, chains):
     # each chain to None
     # if the first chain contains none, it is not part of our business
     start = 1 if realChainz[0][-1] is None else 0
-    changeLists = concatRecursive([], realChainz, start)
+    changeLists = itertools.chain.from_iterable(map(itertools.permutations,
+                                                    concatRecursive([],
+                                                                    realChainz,
+                                                                    start)))
     stackCandidates = []
     for clist in changeLists:
         newStack = copy(stack)
