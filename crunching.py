@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 
-import itertools
+import json
+import itertools as it
 from collections import deque
-from copy import copy
+from copy import copy, deepcopy
 
 
 def findChains(stackl, debug=False):
@@ -71,10 +72,11 @@ def distance(a, b):
     return max(abs(a_row - b_row), abs(a_col - b_col))
 
 
-def solveOneByOne(stack, chains, startIdx=None):
+def solutionChainAndCost(stack, chains, cost=0, path=[], startIdx=None):
     # basically old solutionChain1
     # first, remove all length one chains (those are already placed)
     realChainz = [c for c in chains if len(c) > 1]
+    solutionChain = path
     totalDistance = 0
     # We are ready to start sorting now
     for i, chain in enumerate(realChainz):
@@ -113,6 +115,7 @@ def solveOneByOne(stack, chains, startIdx=None):
             # Obviously, when reaching None as the last element, we break
             # and go to the next chain
             if n is None:
+                startIdx = chain[j - 1]
                 break
             elif j is 0 and noneFlag:
                 totalDistance += distance(startIdx, chain[j + 1])
@@ -126,30 +129,84 @@ def solveOneByOne(stack, chains, startIdx=None):
             else:
                 totalDistance += distance(chain[j - 1], chain[j + 1])
                 totalDistance += distance(chain[j + 1], n)
+            solutionChain.append(n)
     # Done with the chains
-    return totalDistance
+    solutionChain.append(None)
+    return (solutionChain, cost + totalDistance)
+
+
+def solveOneByOne(stack, chains, startIdx=None):
+    _, cost = solutionChainAndCost(stack, chains, 0, [], startIdx)
+    return cost
 
 
 def testChain(l):
     stacks = concatChains(l, findChains(l))
-    for stack, cost, startIdx in stacks:
+    for stack, cost, startIdx, _ in stacks:
         totalCost = solveOneByOne(stack, findChains(stack), startIdx) + cost
         print(stack, findChains(stack), totalCost, cost, startIdx)
     print(l, findChains(l), solveOneByOne(l, findChains(l)))
+
+
+def findShortestPath(stack):
+    shortestPath = findShortestPathRecursive(stack, 0, [], None)
+    printStack(stack)
+    print("Shortest path is {} with {} steps".format(*shortestPath))
+    print("Chains were: ", list(map(list, findChains(stack))))
+
+
+def findShortestPathRecursive(stack, cost, path, startIdx):
+    chains = findChains(stack)
+    cheapestSolution = solutionChainAndCost(stack, deepcopy(chains), cost,
+                                            copy(path), startIdx)
+    if cheapestSolution[1] == cost:
+        return (path, cost)
+
+    realChains = [c for c in chains if len(c) > 1]
+    firstChainHasNone = realChains[0][-1] is None
+    if firstChainHasNone:
+        toTest = [realChains[0][0]]
+    else:
+        toTest = []
+    chainsToTest = realChains[1:] if firstChainHasNone else realChains
+    toTest += list(it.chain.from_iterable(chainsToTest))
+    toTest = [t for t in toTest if t not in path]
+
+    for n in toTest:
+        newStack = copy(stack)
+        newPath = copy(path)
+        newCost = cost
+        pN = newStack.index(n)
+        # print("Moving from {} to {} at {}".format(startIdx, n, pN))
+        newCost += distance(startIdx, pN)
+        pNone = newStack.index(None)
+        # print("Moving {} from {} to {}...".format(n, pN, pNone))
+        newCost += distance(pN, pNone)
+        newStack[pNone], newStack[pN] = n, None
+        newPath.append(n)
+        if newCost > cheapestSolution[1]:
+            continue
+        result = findShortestPathRecursive(newStack, newCost, newPath, pNone)
+        if result[1] < cheapestSolution[1]:
+            # print("New cheapest solution cost {}:".format(result[1]))
+            # print(result[0], result[1])
+            cheapestSolution = result
+    return cheapestSolution
 
 
 def concatChains(stack, chains):
     # In theory, this has many different candidates
     # Get all chains >1
     realChainz = [c for c in chains if len(c) > 1]
+    if len(realChainz) is 0:
+        return []
     # To concatenate the chains, we have to move one element of
     # each chain to None
     # if the first chain contains none, it is not part of our business
     start = 1 if realChainz[0][-1] is None else 0
-    changeLists = itertools.chain.from_iterable(map(itertools.permutations,
-                                                    concatRecursive([],
-                                                                    realChainz,
-                                                                    start)))
+    changeLists = it.chain.from_iterable(map(it.permutations,
+                                             concatRecursive([], realChainz,
+                                                             start)))
     stackCandidates = []
     for clist in changeLists:
         newStack = copy(stack)
@@ -164,8 +221,23 @@ def concatChains(stack, chains):
         if newStack in stackCandidates:
             print("Weird...", newStack)
         else:
-            stackCandidates.append((newStack, cost, pNone))
+            stackCandidates.append((newStack, cost, pNone, clist))
     return stackCandidates
+
+
+def buildConcatenationOptions(stack, chains):
+    realChains = [c for c in chains if len(c) > 1]
+    # Exit for a completely sorted array
+    if len(realChains) is 0:
+        return []
+    # To concatenate the chains, we have to move one element of
+    # each chain to None
+    # if the first chain contains none, it is not part of our business
+    start = 1 if realChains[0][-1] is None else 0
+    changeLists = it.chain.from_iterable(map(it.permutations,
+                                             concatRecursive([], realChains,
+                                                             start)))
+    return changeLists
 
 
 def concatRecursive(changelist, chainlist, chainidx):
@@ -179,32 +251,48 @@ def concatRecursive(changelist, chainlist, chainidx):
     return candidates
 
 
+def printStack(stack):
+    for i in range(3):
+        for j in range(3):
+            idx = i * 3 + j
+            print("{}".format("_" if stack[idx] is None else stack[idx]),
+                  end="|")
+        print("\n––––––")
+
+
 def main(debug=False):
-    count = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-    nonecnt = 0
+    costs = dict()
+    solutions = []
     print("Creating all possible Rack permutations")
-    rackPermutations = list(itertools.permutations(
-                            [0, 1, 2, 3, 4, 5, 6, 7, None]))
+    rackPermutations = list(map(list, it.permutations(
+                            [0, 1, 2, 3, 4, 5, 6, 7, None])))
+    lenPerms = len(rackPermutations)
     print("Crunching all permutations...")
-    for perm in rackPermutations:
-        # WHAT DO WE WANT TO KNOW ABOUT THIS SHIT
-        i = 0
-        chains = findChains(perm)
-        # Solve different ways:
-        # 1: work whole chain, append next one
-        d = solveOneByOne(copy(perm), chains)
-        print("{}: {}".format(perm, d))
+    for i, perm in enumerate(rackPermutations):
+        path, shortestPath = findShortestPathRecursive(perm, 0, [], None)
+        print("\r{}/{}".format(i, lenPerms), end="")
+        if shortestPath in costs.keys():
+            costs[shortestPath] += 1
+        else:
+            costs[shortestPath] = 1
         # 2: concatenate all chains, work one chain
         # 3: clever concatenation should do the trick
         # print("Distance for solving: {} on {} long chain {}".format(
         #       d, len(c), "with None" if noneflag else ""))
+        solutions.append((perm, path, shortestPath))
+    for k, v in costs.items():
+        print("Solved in {:2} steps: {}".format(k, v))
 
-    for i in range(10):
+    outfile = open("solutionDump.json", "w")
+    json.dump(solutions, outfile)
+    outfile.close()
+    print(costs)
+    """for i in range(10):
         print("{} of {} permutations ({}%) have {} chains"
               .format(count[i], len(rackPermutations),
                       count[i] / len(rackPermutations) * 100.0, i))
     print("{} of {} permutations with None in Mainchain"
-          .format(nonecnt, len(rackPermutations)))
+          .format(nonecnt, len(rackPermutations)))"""
     # print("Done finding {} chain groups!".format(len(chainGroups)))
 
 
