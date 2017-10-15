@@ -133,6 +133,48 @@ def printArray(stack):
         print()
 
 
+def concatChains(stack, chains):
+    # In theory, this has many different candidates
+    # Get all chains >1
+    realChainz = [c for c in chains if len(c) > 1]
+    if len(realChainz) is 0:
+        return []
+    # To concatenate the chains, we have to move one element of
+    # each chain to None
+    # if the first chain contains none, it is not part of our business
+    start = 1 if realChainz[0][-1] is None else 0
+    changeLists = it.chain.from_iterable(map(it.permutations,
+                                             concatRecursive([], realChainz,
+                                                             start)))
+    stackCandidates = []
+    for clist in changeLists:
+        newStack = copy(stack)
+        cost = 0
+        pNone = None
+        for n in clist:
+            pN = newStack.index(n)
+            cost += distance(pNone, pN)
+            pNone = newStack.index(None)
+            cost += distance(pN, pNone)
+            newStack[pNone], newStack[pN] = n, None
+        if newStack in stackCandidates:
+            print("Weird...", newStack)
+        else:
+            stackCandidates.append((newStack, cost, pNone, clist))
+    return stackCandidates
+
+
+def concatRecursive(changelist, chainlist, chainidx):
+    candidates = []
+    if chainidx is len(chainlist):
+        return [changelist]
+    for n in chainlist[chainidx]:
+        newChangeList = copy(changelist)
+        newChangeList.append(n)
+        candidates += concatRecursive(newChangeList, chainlist, chainidx + 1)
+    return candidates
+
+
 def main(debug=False):
     count = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     print("Creating all possible Rack permutations")
