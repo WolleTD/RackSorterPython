@@ -144,12 +144,9 @@ def findShortestPath(stack):
 
 def findShortestPathRecursive(stack, cost, path, startIdx):
     chains = findChains(stack)
-    cheapestSolution = solutionChainAndCost(stack, deepcopy(chains), cost,
-                                            copy(path), startIdx)
-    if cheapestSolution[1] == cost:
-        return (path, cost)
-
     realChains = [c for c in chains if len(c) > 1]
+    if len(realChains) is 0:
+        return (path, cost)
     firstChainHasNone = realChains[0][-1] is None
     if firstChainHasNone:
         toTest = [realChains[0][0]]
@@ -158,8 +155,17 @@ def findShortestPathRecursive(stack, cost, path, startIdx):
     chainsToTest = realChains[1:] if firstChainHasNone else realChains
     toTest += list(it.chain.from_iterable(chainsToTest))
     toTest = [t for t in toTest if t not in path]
+    if len(toTest) is 0:
+        return solutionChainAndCost(stack, chains, cost, path, startIdx)
 
+    cheapestSolution = (path, 10000)
     for n in toTest:
+        # ___  __   __   __
+        #  |  /  \ |  \ /  \
+        #  |  \__/ |__/ \__/
+        #
+        # This cost calculation in between here feels weird
+        # and somehow wrong. Check!
         newStack = copy(stack)
         newPath = copy(path)
         newCost = cost
