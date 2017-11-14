@@ -8,7 +8,7 @@ liegt, deren Index seiner Wertigkeit entspricht. Der leere Lagerplatz ist dabei
 der letzte bzw. n-1. Die Lagerplätze werden dabei von Null an fortlaufend nummeriert.
 
 Es kann immer nur ein Element gleichzeitig transportiert werden und der einzige
-mmögliche Ablageort ist der aktuell leere Lagerplatz.
+mögliche Ablageort ist der aktuell leere Lagerplatz.
 Jede Bewegung benötigt Zeit zur Durchführung, abhängig vom Abstand der anzufahrenden
 Plätze. Zur Berechnung dieser muss die Breite des Lagers bekannt sein.
 
@@ -16,7 +16,8 @@ Es soll versucht werden, den schnellsten Lösungsweg zu finden.
 
 Analyse:
 Jede Permutation einer Menge von Werten (entspr. Wertigkeit der Elemente) lässt
-sich in Untermengen aufteilen, die untereinander vertauscht sind. Einige dieser Untermengen enthalten dabei nur einen Wert, diese Werte liegen schon an der
+sich in Untermengen aufteilen, die untereinander vertauscht sind. Einige dieser 
+Untermengen enthalten dabei nur einen Wert, diese Werte liegen schon an der
 richtigen Position.
 
 Die Mengen von Werten lassen sich in Ketten anordnen, die beschreiben, in 
