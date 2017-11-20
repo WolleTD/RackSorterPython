@@ -5,6 +5,11 @@ from collections import deque
 from copy import copy
 
 
+FACTOR_TIME_X = 1.6
+FACTOR_TIME_Y_UP = 3.1
+FACTOR_TIME_Y_DOWN = 2.5
+LOADING_COST = 4.8
+
 xSize = 3
 ySize = 3
 
@@ -79,7 +84,12 @@ def distance(a, b):
     a_col = a % ySize
     b_row = b // xSize
     b_col = b % ySize
-    return max(abs(a_row - b_row), abs(a_col - b_col))
+    # Upward movement?
+    row_cost = (a_row - b_row) * FACTOR_TIME_Y_DOWN
+    if a_row < b_row:
+        row_cost = abs(a_row - b_row) * FACTOR_TIME_Y_UP
+    col_cost = abs(a_col - b_col)
+    return max(row_cost, col_cost) + LOADING_COST
 
 
 def solutionChainAndCost(stack, chains, cost=0, path=[], startIdx=None):
