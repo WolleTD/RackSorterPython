@@ -43,8 +43,8 @@ def adsControl(data, solution):
 
 def main():
     racksorter.setDimensions(3, 3)
-    inputArray = [4, 3, 7, 0, 1, 6, None, 2, 5]
-    solution = racksorter.findShortestPath(inputArray)
+    inputArray = [5, 7, 1, 4, 6, 0, 3, 2, None]
+    solution = racksorter.findShortestPath(inputArray)[0]
     adsControl(copy(inputArray), solution)
 
 

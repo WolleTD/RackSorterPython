@@ -163,7 +163,7 @@ def findShortestPath(stack):
         shortestPath = findShortestPathRecursive(stack, 0, [], None)
         print("Shortest path is {} with {} steps".format(*shortestPath))
         print("Chains were: ", list(map(list, findChains(stack))))
-        return shortestPath[0]
+        return shortestPath
 
 
 def findShortestPathRecursive(stack, cost, path, startIdx):
