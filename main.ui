@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>870</width>
-    <height>624</height>
+    <width>819</width>
+    <height>635</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -33,6 +33,14 @@
           <layout class="QGridLayout" name="gridLayout_2"/>
          </widget>
         </item>
+        <item row="0" column="1">
+         <widget class="QGroupBox" name="gbState">
+          <property name="title">
+           <string>Aktueller Zustand</string>
+          </property>
+          <layout class="QGridLayout" name="gridLayout_3"/>
+         </widget>
+        </item>
         <item row="1" column="0" colspan="2">
          <widget class="QGroupBox" name="gbSorter">
           <property name="maximumSize">
@@ -51,36 +59,38 @@
            <property name="bottomMargin">
             <number>4</number>
            </property>
-           <item row="0" column="0" rowspan="2">
-            <widget class="QTextEdit" name="teInfo">
-             <property name="readOnly">
-              <bool>true</bool>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="1">
+           <item row="1" column="1">
             <widget class="QPushButton" name="btnFindSolution">
              <property name="text">
               <string>Schnellste Lösung finden</string>
              </property>
             </widget>
            </item>
-           <item row="1" column="1">
+           <item row="1" column="0" rowspan="3">
+            <widget class="QTextEdit" name="teInfo">
+             <property name="styleSheet">
+              <string notr="true"/>
+             </property>
+             <property name="readOnly">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="1">
             <widget class="QPushButton" name="btnRunADS">
              <property name="text">
               <string>Per ADS durchführen</string>
              </property>
             </widget>
            </item>
+           <item row="3" column="1">
+            <widget class="QPushButton" name="btnSimulation">
+             <property name="text">
+              <string>Simulation</string>
+             </property>
+            </widget>
+           </item>
           </layout>
-         </widget>
-        </item>
-        <item row="0" column="1">
-         <widget class="QGroupBox" name="gbState">
-          <property name="title">
-           <string>Aktueller Zustand</string>
-          </property>
-          <layout class="QGridLayout" name="gridLayout_3"/>
          </widget>
         </item>
        </layout>
@@ -280,7 +290,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>870</width>
+     <width>819</width>
      <height>22</height>
     </rect>
    </property>

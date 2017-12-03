@@ -2,6 +2,7 @@
 
 import sys
 from collections import namedtuple
+import PyQt5.QtCore as core
 import PyQt5.QtWidgets as widgets
 import PyQt5.QtGui as gui
 import PyQt5.uic as uic
@@ -21,7 +22,6 @@ window = uic.loadUi("main.ui")
 
 
 def initConfigUI():
-    global config
     window.leWidth.setText(str(config.xSize))
     window.leHeight.setText(str(config.ySize))
     window.leTCAddr.setText(config.adsAddr)
@@ -29,7 +29,6 @@ def initConfigUI():
     
 
 def makeGrid(box, readOnly = False):
-    global config
     layout = box.layout()
     positions = [(i,j) for i in range(config.xSize) for j in range(config.ySize)]
     
@@ -67,10 +66,9 @@ def makeGrid(box, readOnly = False):
         layout.addWidget(w, *p)
 
 
-def solutionButtonClick():
-    global config
+def gridToList(box):
     l = []
-    layout = window.gbInput.layout()
+    layout = box.layout()
     positions = [(i,j) for i in range(config.xSize) for j in range(config.ySize)]
     for idx in range(len(positions)):
         p = positions[idx]
@@ -80,18 +78,72 @@ def solutionButtonClick():
         if v not in l:
             l.append(v)
         else:
-            window.teInfo.setText("Nope.")
-            return False
+            return None
+    return l
+
+
+def listToGrid(box, l):
+    lView = [0 if i is None else i + 1 for i in l]
+    layout = box.layout()
+    positions = [(i,j) for i in range(config.xSize) for j in range(config.ySize)]
+    for idx in range(len(positions)):
+        p = positions[idx]
+        layout.itemAtPosition(*p).widget().children()[2].setValue(lView[idx])
         
-    window.teInfo.setText(str(l))
+
+def simulationIteration(data, idx, path, positions, prevIdx = -1):
+    layout = window.gbState.layout()
+    element = path[idx]
+    valueIndex = data.index(element)
+    noneIndex = data.index(None)
+    print("Moving {} from {} to {}".format(element, positions[valueIndex], positions[noneIndex]))
+    window.teInfo.setText("Moving {} from {} to {}".format(element, positions[valueIndex], positions[noneIndex]))
+    prevWidget = layout.itemAtPosition(*positions[prevIdx]).widget()
+    valueWidget = layout.itemAtPosition(*positions[valueIndex]).widget()
+    noneWidget = layout.itemAtPosition(*positions[noneIndex]).widget()
+    valueWidget.setStyleSheet('QWidget{background-color:#ef8888}')
+    noneWidget.setStyleSheet('QWidget{background-color:#efef88}')
+    if prevIdx == path[idx - 1]:
+        prevWidget.setStyleSheet('QWidget{background-color:#88ef88}')
+    else:
+        prevWidget.setStyleSheet('')
+    listToGrid(window.gbState, data)
+    data[noneIndex], data[valueIndex] = element, None
+    if element is not None:
+        core.QTimer.singleShot(1000, lambda: simulationIteration(data, idx + 1, path, positions, noneIndex))
+    else:
+        core.QTimer.singleShot(1000, lambda: noneWidget.setStyleSheet('QWidget{background-color:#88ef88}'))
+
+
+def solutionButtonClick():
+    l = gridToList(window.gbInput)
+    if l is None:
+        window.teInfo.setText("All elements have to be unique!")
+        return False
     sp = racksorter.findShortestPath(l)
-    window.teInfo.setText("Shortest Path with {} steps:\n{}".format(sp[1], str(sp[0])))
+    window.teInfo.setText("Shortest Path with {} steps:\n{}".format(sp[1], ['_' if i is None else i + 1 for i in sp[0]]))
+
+
+def simulationButtonClick():
+    data = gridToList(window.gbInput)
+    print("Read data:", data)
+    positions = [(i,j) for i in range(config.xSize) for j in range(config.ySize)]
+    if data is None:
+        window.teInfo.setText("All elements have to be unique!")
+        return False
+    listToGrid(window.gbState, data)
+    for w in [n for n in window.gbState.children() if type(n) is widgets.QWidget]:
+        w.setStyleSheet('')
+    path = racksorter.findShortestPath(data)[0]
+    core.QTimer.singleShot(1000, lambda: simulationIteration(data, 0, path, positions))
+
 
 # Main Program
 initConfigUI()
 makeGrid(window.gbInput)
 makeGrid(window.gbState, True)
 window.btnFindSolution.clicked.connect(solutionButtonClick)
+window.btnSimulation.clicked.connect(simulationButtonClick)
 
 window.show()
 app.exec_()
