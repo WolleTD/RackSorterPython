@@ -170,7 +170,9 @@ def findShortestPathRecursive(stack, cost, path, startIdx):
     chains = findChains(stack)
     realChains = [c for c in chains if len(c) > 1]
     if len(realChains) is 0:
-        return (path, cost)
+        newPath = copy(path)
+        newPath.append(None)
+        return (newPath, cost)
     firstChainHasNone = realChains[0][-1] is None
     if firstChainHasNone:
         toTest = [realChains[0][0]]
