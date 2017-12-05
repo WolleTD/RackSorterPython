@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import time
 import itertools as it
 from collections import deque
 from copy import copy
@@ -160,9 +161,12 @@ def findShortestPath(stack):
         print("Stack size doesn't match dimensions {},{}".format(xSize, ySize))
         print("Expected {}, got {}".format(xSize * ySize, len(stack)))
     else:
+        start = time.time()
         shortestPath = findShortestPathRecursive(stack, 0, [], None)
+        t = (time.time() - start) * 1000
         print("Shortest path is {} with {} steps".format(*shortestPath))
         print("Chains were: ", list(map(list, findChains(stack))))
+        print("Finished in ", t, " milliseconds")
         return shortestPath
 
 
@@ -181,7 +185,7 @@ def findShortestPathRecursive(stack, cost, path, startIdx):
     chainsToTest = realChains[1:] if firstChainHasNone else realChains
     toTest += list(it.chain.from_iterable(chainsToTest))
     toTest = [t for t in toTest if t not in path]
-    if len(toTest) is 0:
+    if len(toTest) is 0 or (len(toTest) is 1 and firstChainHasNone):
         return solutionChainAndCost(stack, chains, cost, path, startIdx)
 
     cheapestSolution = (path, 10000)

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import sys
-from collections import namedtuple
+from collections import namedtuple, Counter
 import PyQt5.QtCore as core
 import PyQt5.QtWidgets as widgets
 import PyQt5.QtGui as gui
@@ -17,20 +17,23 @@ config = Config(xSize = 3,
                 adsAddr = '127.0.0.1.1.1',
                 adsPort = pyads.PORT_SPS1)
 
+racksorter.setDimensions(config.xSize, config.ySize)
 app = widgets.QApplication(sys.argv)
 window = uic.loadUi("main.ui")
 
 
 def initConfigUI():
-    window.leWidth.setText(str(config.xSize))
-    window.leHeight.setText(str(config.ySize))
+    window.sbWidth.setValue(config.xSize)
+    window.sbHeight.setValue(config.ySize)
     window.leTCAddr.setText(config.adsAddr)
     window.leTCPort.setText(str(config.adsPort))
     
 
 def makeGrid(box, readOnly = False):
+    for w in [c for c in box.children() if type(c) is widgets.QWidget]:
+        w.setParent(None)
     layout = box.layout()
-    positions = [(i,j) for i in range(config.xSize) for j in range(config.ySize)]
+    positions = [(i,j) for i in range(config.ySize) for j in range(config.xSize)]
     
     for idx in range(len(positions)):
         p = positions[idx]
@@ -69,23 +72,34 @@ def makeGrid(box, readOnly = False):
 def gridToList(box):
     l = []
     layout = box.layout()
-    positions = [(i,j) for i in range(config.xSize) for j in range(config.ySize)]
+    positions = [(i,j) for i in range(config.ySize) for j in range(config.xSize)]
     for idx in range(len(positions)):
         p = positions[idx]
-        v = layout.itemAtPosition(*p).widget().children()[2].value()
+        w = layout.itemAtPosition(*p).widget()
+        v = w.children()[2].value()
         # Convert to racksorter indexes
         v = v - 1 if v != 0 else None
-        if v not in l:
-            l.append(v)
+        l.append(v)
+    nonUniq = [k for (k, v) in Counter(l).items() if v > 1]
+    for idx in range(len(positions)):
+        p = positions[idx]
+        w = layout.itemAtPosition(*p).widget()
+        v = w.children()[2].value()
+        v = v - 1 if v != 0 else None
+        if v in nonUniq:
+            w.setStyleSheet('QWidget{background-color:#fea0a0}')
         else:
-            return None
-    return l
+            w.setStyleSheet('')
+    if len(nonUniq) == 0:
+        return l
+    else:
+        return None
 
 
 def listToGrid(box, l):
     lView = [0 if i is None else i + 1 for i in l]
     layout = box.layout()
-    positions = [(i,j) for i in range(config.xSize) for j in range(config.ySize)]
+    positions = [(i,j) for i in range(config.ySize) for j in range(config.xSize)]
     for idx in range(len(positions)):
         p = positions[idx]
         layout.itemAtPosition(*p).widget().children()[2].setValue(lView[idx])
@@ -127,7 +141,7 @@ def solutionButtonClick():
 def simulationButtonClick():
     data = gridToList(window.gbInput)
     print("Read data:", data)
-    positions = [(i,j) for i in range(config.xSize) for j in range(config.ySize)]
+    positions = [(i,j) for i in range(config.ySize) for j in range(config.xSize)]
     if data is None:
         window.teInfo.setText("All elements have to be unique!")
         return False
@@ -136,14 +150,30 @@ def simulationButtonClick():
         w.setStyleSheet('')
     path = racksorter.findShortestPath(data)[0]
     core.QTimer.singleShot(1000, lambda: simulationIteration(data, 0, path, positions))
+ 
 
+def setConfigButtonClick():
+    global config
+    config = Config(xSize = window.sbWidth.value(),
+                ySize = window.sbHeight.value(),
+                adsAddr = window.leTCAddr.text(),
+                adsPort = int(window.leTCPort.text()))
+    makeGrid(window.gbInput)
+    makeGrid(window.gbState, True)
+    racksorter.setDimensions(config.xSize, config.ySize)
+    
 
-# Main Program
-initConfigUI()
-makeGrid(window.gbInput)
-makeGrid(window.gbState, True)
-window.btnFindSolution.clicked.connect(solutionButtonClick)
-window.btnSimulation.clicked.connect(simulationButtonClick)
+def main():
+    # Main Program
+    initConfigUI()
+    makeGrid(window.gbInput)
+    makeGrid(window.gbState, True)
+    window.btnFindSolution.clicked.connect(solutionButtonClick)
+    window.btnSimulation.clicked.connect(simulationButtonClick)
+    window.btnSetConfig.clicked.connect(setConfigButtonClick)
+    
+    window.show()
+    app.exec_()
 
-window.show()
-app.exec_()
+if __name__ == '__main__':
+    main()

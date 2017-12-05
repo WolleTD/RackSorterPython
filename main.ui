@@ -155,22 +155,26 @@
                 <item row="2" column="0">
                  <widget class="QLabel" name="label_21">
                   <property name="text">
-                   <string>Breite:</string>
+                   <string>Regal-Maße:</string>
                   </property>
                  </widget>
                 </item>
                 <item row="2" column="1">
                  <layout class="QHBoxLayout" name="horizontalLayout_3">
                   <item>
-                   <widget class="QLineEdit" name="leWidth">
-                    <property name="maximumSize">
-                     <size>
-                      <width>100</width>
-                      <height>16777215</height>
-                     </size>
+                   <widget class="QLabel" name="label_2">
+                    <property name="text">
+                     <string>Breite:</string>
                     </property>
-                    <property name="inputMask">
-                     <string>90</string>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QSpinBox" name="sbWidth">
+                    <property name="minimum">
+                     <number>1</number>
+                    </property>
+                    <property name="maximum">
+                     <number>10</number>
                     </property>
                    </widget>
                   </item>
@@ -182,15 +186,12 @@
                    </widget>
                   </item>
                   <item>
-                   <widget class="QLineEdit" name="leHeight">
-                    <property name="maximumSize">
-                     <size>
-                      <width>100</width>
-                      <height>16777215</height>
-                     </size>
+                   <widget class="QSpinBox" name="sbHeight">
+                    <property name="minimum">
+                     <number>1</number>
                     </property>
-                    <property name="inputMask">
-                     <string>90</string>
+                    <property name="maximum">
+                     <number>4</number>
                     </property>
                    </widget>
                   </item>
