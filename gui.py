@@ -9,7 +9,6 @@ import PyQt5.uic as uic
 import racksorter
 import pyads
 
-
 Config = namedtuple('Config', ['xSize', 'ySize', 'adsAddr', 'adsPort'])
 
 config = Config(xSize = 3,
@@ -20,6 +19,8 @@ config = Config(xSize = 3,
 racksorter.setDimensions(config.xSize, config.ySize)
 app = widgets.QApplication(sys.argv)
 window = uic.loadUi("main.ui")
+plc = pyads.Connection(config.adsAddr, config.adsPort)
+solution = ([], None)
 
 
 def initConfigUI():
@@ -28,6 +29,11 @@ def initConfigUI():
     window.leTCAddr.setText(config.adsAddr)
     window.leTCPort.setText(str(config.adsPort))
     
+
+def log(msg):
+    window.teLog.append(msg)
+    print(msg)
+
 
 def makeGrid(box, readOnly = False):
     for w in [c for c in box.children() if type(c) is widgets.QWidget]:
@@ -103,14 +109,37 @@ def listToGrid(box, l):
     for idx in range(len(positions)):
         p = positions[idx]
         layout.itemAtPosition(*p).widget().children()[2].setValue(lView[idx])
-        
+
+
+def findSolution():
+    global solution
+    data = gridToList(window.gbInput)
+    log("Read data: {}".format(data))
+    if data is None:
+        window.teInfo.setText("All elements have to be unique!")
+        return False
+    listToGrid(window.gbState, data)
+    for w in [n for n in window.gbState.children() if type(n) is widgets.QWidget]:
+        w.setStyleSheet('')
+    sp = racksorter.findShortestPath(data)
+    window.teInfo.setText("Shortest Path with {} steps:\n{}".format(sp[1], ['_' if i is None else i + 1 for i in sp[0]]))
+    solution = (data, sp)
+
+
+def simulateSolution():
+    data = gridToList(window.gbInput)
+    positions = [(i,j) for i in range(config.ySize) for j in range(config.xSize)]
+    if not solution[0] == data:
+        findSolution()
+    core.QTimer.singleShot(1000, lambda: simulationIteration(data, 0, solution[1][0], positions))
+
 
 def simulationIteration(data, idx, path, positions, prevIdx = -1):
     layout = window.gbState.layout()
     element = path[idx]
     valueIndex = data.index(element)
     noneIndex = data.index(None)
-    print("Moving {} from {} to {}".format(element, positions[valueIndex], positions[noneIndex]))
+    log("Moving {} from {} to {}".format(element, positions[valueIndex], positions[noneIndex]))
     window.teInfo.setText("Moving {} from {} to {}".format(element, positions[valueIndex], positions[noneIndex]))
     prevWidget = layout.itemAtPosition(*positions[prevIdx]).widget()
     valueWidget = layout.itemAtPosition(*positions[valueIndex]).widget()
@@ -129,28 +158,94 @@ def simulationIteration(data, idx, path, positions, prevIdx = -1):
         core.QTimer.singleShot(1000, lambda: noneWidget.setStyleSheet('QWidget{background-color:#88ef88}'))
 
 
-def solutionButtonClick():
-    l = gridToList(window.gbInput)
-    if l is None:
-        window.teInfo.setText("All elements have to be unique!")
-        return False
-    sp = racksorter.findShortestPath(l)
-    window.teInfo.setText("Shortest Path with {} steps:\n{}".format(sp[1], ['_' if i is None else i + 1 for i in sp[0]]))
-
-
-def simulationButtonClick():
+def runADSButtonClick():
     data = gridToList(window.gbInput)
-    print("Read data:", data)
-    positions = [(i,j) for i in range(config.ySize) for j in range(config.xSize)]
-    if data is None:
-        window.teInfo.setText("All elements have to be unique!")
+    if not solution[0] == data:
+        findSolution()
+    if not plc.is_open and not adsConnect():
+        log("Couldn't run ADS solution.")
+    core.QTimer.singleShot(100, lambda: adsBackgroundProcess(data, 0, solution[1][0], 1))
+
+
+def adsBackgroundProcess(data, idx, path, step):
+    element = path[idx]
+    if element is None:
+        return
+    valueIndex = data.index(element)
+    noneIndex = data.index(None)
+
+    valuePos = index2ADS(valueIndex)
+    nonePos = index2ADS(noneIndex)
+    if step == 1:
+        if plc.read_write(2, 1, pyads.PLCTYPE_BYTE, valuePos, pyads.PLCTYPE_UINT) == 0:
+            log("ADS move to valuePos")
+            core.QTimer.singleShot(100, lambda: adsBackgroundProcess(data, idx, solution[1][0], 2))
+        else:
+            core.QTimer.singleShot(100, lambda: adsBackgroundProcess(data, idx, solution[1][0], 1))
+    if step == 2:
+        if plc.read_write(2, 3, pyads.PLCTYPE_BYTE, True, pyads.PLCTYPE_BOOL) == 0:
+            log("ADS load")
+            core.QTimer.singleShot(100, lambda: adsBackgroundProcess(data, idx, solution[1][0], 3))
+        else:
+            core.QTimer.singleShot(100, lambda: adsBackgroundProcess(data, idx, solution[1][0], 2))
+    if step == 3:
+        if plc.read_write(2, 2, pyads.PLCTYPE_BYTE, nonePos, pyads.PLCTYPE_UINT) == 0:
+            log("ADS move to nonePos")
+            core.QTimer.singleShot(100, lambda: adsBackgroundProcess(data, idx, solution[1][0], 4))
+        else:
+            core.QTimer.singleShot(100, lambda: adsBackgroundProcess(data, idx, solution[1][0], 3))
+    if step == 4:
+        if plc.read_write(2, 4, pyads.PLCTYPE_BYTE, True, pyads.PLCTYPE_BOOL) == 0:
+            log("ADS unload")
+            data[noneIndex], data[valueIndex] = element, None
+            core.QTimer.singleShot(100, lambda: adsBackgroundProcess(data, idx + 1, solution[1][0], 1))
+        else:
+            core.QTimer.singleShot(100, lambda: adsBackgroundProcess(data, idx, solution[1][0], 4))
+
+
+def index2ADS(n):
+    xPos = n % config.xSize
+    yPos = 3 - (n // config.ySize)
+    return (xPos << 8) + yPos
+
+
+def adsStart():
+    if not plc.is_open and not adsConnect():
+        log("Couldn't send start command.")
+    log("ADS setting system state to Active")
+    plc.read_write(1, 1, pyads.PLCTYPE_BOOL, True, pyads.PLCTYPE_BOOL)
+
+
+def adsStop():
+    if not plc.is_open and not adsConnect():
+        log("Couldn't send stop command.")
+    log("ADS setting system state to Inactive")
+    plc.read_write(1, 1, pyads.PLCTYPE_BOOL, False, pyads.PLCTYPE_BOOL)
+
+
+def adsInit():
+    if not plc.is_open and not adsConnect():
+        log("Couldn't reinitialize system: ADS connection failed!")
         return False
-    listToGrid(window.gbState, data)
-    for w in [n for n in window.gbState.children() if type(n) is widgets.QWidget]:
-        w.setStyleSheet('')
-    path = racksorter.findShortestPath(data)[0]
-    core.QTimer.singleShot(1000, lambda: simulationIteration(data, 0, path, positions))
- 
+    log("ADS run initialization")
+    # Set Reset/Init-ADS Message
+    plc.read_write(1, 4, pyads.PLCTYPE_BOOL, True, pyads.PLCTYPE_BOOL)
+
+
+def adsConnect():
+    global plc
+    if plc.is_open:
+        plc.close()
+    try:
+        plc = pyads.Connection(config.adsAddr, config.adsPort)
+        plc.open()
+        log("ADS connection successful")
+        return True
+    except pyads.ADSError:
+        pyads.delete_route(pyads.AmsAddr(config.adsAddr, config.adsPort))
+        log("ERROR: Could not open ADS connection!")
+        return False
+
 
 def setConfigButtonClick():
     global config
@@ -164,14 +259,19 @@ def setConfigButtonClick():
     
 
 def main():
-    # Main Program
+    # Setup UI functionality
     initConfigUI()
     makeGrid(window.gbInput)
     makeGrid(window.gbState, True)
-    window.btnFindSolution.clicked.connect(solutionButtonClick)
-    window.btnSimulation.clicked.connect(simulationButtonClick)
+    window.btnFindSolution.clicked.connect(findSolution)
+    window.btnSimulation.clicked.connect(simulateSolution)
+    window.btnRunADS.clicked.connect(runADSButtonClick)
     window.btnSetConfig.clicked.connect(setConfigButtonClick)
-    
+    window.btnConnectADS.clicked.connect(adsConnect)
+    window.btnAdsStart.clicked.connect(adsStart)
+    window.btnAdsStop.clicked.connect(adsStop)
+    window.btnAdsInit.clicked.connect(adsInit)
+    # Run UI
     window.show()
     app.exec_()
 
