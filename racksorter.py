@@ -86,8 +86,8 @@ def distance(a, b):
     b_row = b // xSize
     b_col = b % ySize
     # Upward movement?
-    row_cost = (a_row - b_row) * FACTOR_TIME_Y_DOWN
-    if a_row < b_row:
+    row_cost = abs(a_row - b_row) * FACTOR_TIME_Y_DOWN
+    if a_row > b_row:
         row_cost = abs(a_row - b_row) * FACTOR_TIME_Y_UP
     col_cost = abs(a_col - b_col)
     return max(row_cost, col_cost) + LOADING_COST
