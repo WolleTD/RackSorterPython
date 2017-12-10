@@ -21,6 +21,14 @@ def setDimensions(x, y):
     ySize = y
 
 
+def setTimeFactors(time_x, time_y_up, time_y_down, time_load):
+    global FACTOR_TIME_X, FACTOR_TIME_Y_UP, FACTOR_TIME_Y_DOWN, LOADING_COST
+    FACTOR_TIME_X = time_x
+    FACTOR_TIME_Y_UP = time_y_up
+    FACTOR_TIME_Y_DOWN = time_y_down
+    LOADING_COST = time_load
+
+
 # RackSorter module
 def findChains(stackl, debug=False):
     found = set()
