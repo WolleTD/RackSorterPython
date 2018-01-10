@@ -1,5 +1,18 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
+"""
+    racksorter.py
+    ~~~~~~~~~~~
 
+    Contains all logic to find fast solutions for sorting a rack
+    by only moving one element at a time. See paper for details.
+
+    :copyright: (c) 2017-2018 by Eicke Herbertz, Dominik Hilbers
+    :license: MIT, see LICENSE for details
+
+"""
+
+import sys
 import time
 import itertools as it
 from collections import deque
@@ -16,12 +29,26 @@ ySize = 3
 
 
 def setDimensions(x, y):
+    """
+    :summary: Sets dimensions of the rack to work with
+    :param int x: Number of columns of the rack
+    :param int y: Number of rows in the rack
+
+    """
     global xSize, ySize
     xSize = x
     ySize = y
 
 
 def setTimeFactors(time_x, time_y_up, time_y_down, time_load):
+    """
+    :summary: Sets moving time factors for cost calculation
+    :param float time_x: Movement time for one tile in X direction in seconds
+    :param float time_y_up: Movement time for one tile in Y direction upward in seconds
+    :param float time_y_down: Movement time for one tile in Y direction downward in seconds
+    :param float time_load: Movement time to perform one load/unload cycle in seconds
+
+    """
     global FACTOR_TIME_X, FACTOR_TIME_Y_UP, FACTOR_TIME_Y_DOWN, LOADING_COST
     FACTOR_TIME_X = time_x
     FACTOR_TIME_Y_UP = time_y_up
@@ -29,8 +56,15 @@ def setTimeFactors(time_x, time_y_up, time_y_down, time_load):
     LOADING_COST = time_load
 
 
-# RackSorter module
 def findChains(stackl, debug=False):
+    """
+    :summary: Finds chains/cycles in permutation
+    :param list stackl: Permutation to find chains in
+    :param bool debug: Print chains to stderr
+    :rtype: deque
+    :return: deque of deques (one deque per chain)
+
+    """
     found = set()
     # Find chains
     chains = deque()
@@ -48,7 +82,7 @@ def findChains(stackl, debug=False):
         if i in found:
             continue
         if debug:
-            print(i, end="->")
+            print(i, end="->", file=sys.stderr)
         # start the chain with the current index
         tchain = deque([i])
         # and add it to our found-set
@@ -56,7 +90,7 @@ def findChains(stackl, debug=False):
         # now for the actual chain search
         while n != i:
             if debug:
-                print(n, end="->")
+                print(n, end="->", file=sys.stderr)
             # add current value to found-set
             found.add(n)
             # and left-append it to the chain (we are actually reverse-solving
@@ -80,11 +114,19 @@ def findChains(stackl, debug=False):
         if debug:
             print("{}\nChain {} length {} at {} done {}/{}"
                   .format(n, len(chains), len(tchain), i, len(found),
-                          len(stackl)))
+                          len(stackl)), file=sys.stderr)
     return chains
 
 
 def distance(a, b):
+    """
+    :summary: Distance/cost calculation
+    :param int a: list index of first element
+    :param int b: list index of second element
+    :rtype: float
+    :return: time needed to perform movement from a to b
+
+    """
     if a is None:
         a = xSize * ySize - 1
     if b is None:
@@ -102,7 +144,17 @@ def distance(a, b):
 
 
 def solutionChainAndCost(stack, chains, cost=0, path=[], startIdx=None):
-    # basically old solutionChain1
+    """
+    :summary: Calculates primitive, static solution for given permutation
+    :param list stack: the permutation to solve
+    :param list chains: chains/cycles of the given permutation
+    :param float cost: cost to prepend to the solution
+    :param list path: path to prepend to the solution
+    :param int startIdx: index of permutation to start first movement from
+    :rtype: tuple(list, float)
+    :return: tuple of complete solution list and it's cost
+
+    """
     # first, remove all length one chains (those are already placed)
     realChainz = [c for c in chains if len(c) > 1]
     solutionChain = path
@@ -165,6 +217,13 @@ def solutionChainAndCost(stack, chains, cost=0, path=[], startIdx=None):
 
 
 def findShortestPath(stack):
+    """
+    :summary: Finds the shortest solution to sort the given permutation
+    :param list stack: the permutation to solve
+    :rtype: tuple(list, float)
+    :return: tuple of complete solution list and it's cost
+
+    """
     if len(stack) != xSize * ySize:
         print("Stack size doesn't match dimensions {},{}".format(xSize, ySize))
         print("Expected {}, got {}".format(xSize * ySize, len(stack)))
@@ -179,6 +238,16 @@ def findShortestPath(stack):
 
 
 def findShortestPathRecursive(stack, cost, path, startIdx):
+    """
+    :summary: Recursive part of solution searching
+    :param list stack: the permutation to solve
+    :param float cost: cost to prepend to the solution
+    :param list path: path to prepend to the solution
+    :param int startIdx: index of permutation to start first movement from
+    :rtype: tuple(list, float)
+    :return: tuple of complete solution list and it's cost
+
+    """
     chains = findChains(stack)
     realChains = [c for c in chains if len(c) > 1]
     if len(realChains) is 0:
@@ -198,12 +267,6 @@ def findShortestPathRecursive(stack, cost, path, startIdx):
 
     cheapestSolution = (path, 10000)
     for n in toTest:
-        # ___  __   __   __
-        #  |  /  \ |  \ /  \
-        #  |  \__/ |__/ \__/
-        #
-        # This cost calculation in between here feels weird
-        # and somehow wrong. Check!
         newStack = copy(stack)
         newPath = copy(path)
         newCost = cost

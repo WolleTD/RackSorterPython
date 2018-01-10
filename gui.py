@@ -1,5 +1,17 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+"""
+    gui.py
+    ~~~~~~~~~~~
+
+    Graphical interface for racksorter and pyads modules in context
+    of the project
+
+    :copyright: (c) 2017-2018 by Eicke Herbertz, Dominik Hilbers
+    :license: MIT, see LICENSE for details
+
+"""
+
 
 import sys
 from collections import namedtuple, Counter
@@ -25,6 +37,10 @@ solution = ([], None)
 
 
 def initConfigUI():
+    """
+    :summary: Sets values of config fields according to currrent config
+
+    """
     window.sbWidth.setValue(config.xSize)
     window.sbHeight.setValue(config.ySize)
     window.leTCAddr.setText(config.adsAddr)
@@ -32,11 +48,22 @@ def initConfigUI():
     
 
 def log(msg):
+    """
+    :summary: Logs to stdout and log window in GUI
+    :param string msg: Text to log
+
+    """
     window.teLog.append(msg)
     print(msg)
 
 
 def makeGrid(box, readOnly = False):
+    """
+    :summary: Generates a text field grid with the dimensions from config
+    :param QGroupBox box: group box to create the grid in
+    :param bool readOnly: make text fields read-only
+
+    """
     for w in [c for c in box.children() if type(c) is widgets.QWidget]:
         w.setParent(None)
     layout = box.layout()
@@ -77,6 +104,13 @@ def makeGrid(box, readOnly = False):
 
 
 def gridToList(box):
+    """
+    :summary: Reads text fields into a list for racksorter module
+    :param QGroupBox box: group box to read the grid from
+    :rtype: list
+    :return: racksorter module-ready list of the permutation
+
+    """
     l = []
     layout = box.layout()
     positions = [(i,j) for i in range(config.ySize) for j in range(config.xSize)]
@@ -104,6 +138,12 @@ def gridToList(box):
 
 
 def listToGrid(box, l):
+    """
+    :summary: Writes a permutation from a list to a grid
+    :param QGroupBox box: group box containing the grid to write to
+    :param list l: the permutation to write to the grid
+
+    """
     lView = [0 if i is None else i + 1 for i in l]
     layout = box.layout()
     positions = [(i,j) for i in range(config.ySize) for j in range(config.xSize)]
@@ -111,6 +151,10 @@ def listToGrid(box, l):
         p = positions[idx]
         layout.itemAtPosition(*p).widget().children()[2].setValue(lView[idx])
 
+
+"""
+BUTTON CLICK EVENTS AND GUI CONTROLLER LOGIC FROM HERE
+"""
 
 def findSolution():
     global solution
@@ -169,6 +213,9 @@ def runADSButtonClick():
 
 
 def adsBackgroundProcess(data, idx, path, step):
+    # Hard quit on ADS reset
+    if solution[1] is None:
+        return
     element = path[idx]
     if element is None:
         return
@@ -225,12 +272,15 @@ def adsStop():
 
 
 def adsInit():
+    global solution
     if not plc.is_open and not adsConnect():
         log("Couldn't reinitialize system: ADS connection failed!")
         return False
     log("ADS run initialization")
     # Set Reset/Init-ADS Message
     plc.read_write(1, 4, pyads.PLCTYPE_BOOL, True, pyads.PLCTYPE_BOOL)
+    # Delete local command cache
+    solution = ([], None)
 
 
 def adsConnect():
