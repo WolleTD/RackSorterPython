@@ -17,7 +17,7 @@ def index2ADS(n):
 
 
 def waitForAdsWrite(plc, group, offset, value, plctype):
-    while not plc.read_write(group, offset, pyads.PLCTYPE_BOOL, value, plctype):
+    while plc.read_write(group, offset, pyads.PLCTYPE_BOOL, value, plctype) != 0:
         time.sleep(0.05)
     
 
@@ -43,7 +43,7 @@ def adsControl(data, solution):
 
 def main():
     racksorter.setDimensions(3, 3)
-    inputArray = [5, 7, 1, 4, 6, 0, 3, 2, None]
+    inputArray = [7, 3, None, 0, 1, 6, 5, 4, 2]
     solution = racksorter.findShortestPath(inputArray)[0]
     adsControl(copy(inputArray), solution)
 
